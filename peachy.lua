@@ -84,6 +84,13 @@ peachy.__index = peachy
   if initialTag then
     self:setTag(initialTag)
     self.paused = false
+  elseif #self.frameTags == 0 then
+    self.frameTags['default'] = {
+        frames=self.frames,
+        direction='forward'
+    }
+    self:setTag('default')
+    self.paused = false
   end
 
   return self
