@@ -81,19 +81,37 @@ peachy.__index = peachy
   self.tagName = nil
   self.direction = nil
 
+  self.prev_tag = nil
+
   if initialTag then
     self:setTag(initialTag)
     self.paused = false
-  elseif #self.frameTags == 0 then
+  elseif #self.tags == 0 then
     self.frameTags['default'] = {
         frames=self.frames,
         direction='forward'
     }
     self:setTag('default')
     self.paused = false
+  else
+    self:setTag(self.tags[1])
+    self.paused = false
   end
 
   return self
+end
+
+--- Play an animation tag once and then switch back to waht was playing before
+-- In the case that this is called again befor the animation finishes playing it
+-- will play the new animation adn then return to playing the animation that was
+-- being played before the first call to playTagOnce
+--
+--@tparam string tag the animation tag name to play.
+function peachy:playTagOnce(tag)
+    if self.prev_tag == nil then
+        self.prev_tag = self.tagName
+    end
+    self:setTag(tag)
 end
 
 --- Switch to a different animation tag.
@@ -189,14 +207,20 @@ function peachy:nextFrame()
 
   -- Looping
   if forward and self.frameIndex > #self.tag.frames then
-    if self.tag.direction == "pingpong" then
+    if self.prev_tag ~= nil then
+      self:setTag(self.prev_tag)
+      self.prev_tag = nil
+    elseif self.tag.direction == "pingpong" then
       self:_pingpongBounce()
     else
       self.frameIndex = 1
     end
     self:call_onLoop()
   elseif not forward and self.frameIndex < 1 then
-    if self.tag.direction == "pingpong" then
+    if self.prev_tag ~= nil then
+      self:setTag(self.prev_tag)
+      self.prev_tag = nil
+    elseif self.tag.direction == "pingpong" then
       self:_pingpongBounce()
     else
       self.frameIndex = #self.tag.frames
@@ -306,6 +330,7 @@ function peachy:_initializeTags()
   assert(self._jsonData.meta.frameTags ~= nil, "No frame tags in JSON! Make sure you exported them in Aseprite!")
 
   self.frameTags = {}
+  self.tags = {}
 
   for _, frameTag in ipairs(self._jsonData.meta.frameTags) do
     local ft = {}
@@ -317,6 +342,7 @@ function peachy:_initializeTags()
     end
 
     self.frameTags[frameTag.name] = ft
+    table.insert(self.tags, frameTag.name)
   end
 end
 
